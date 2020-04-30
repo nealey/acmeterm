@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"os"
@@ -9,12 +10,15 @@ import (
 
 	"9fans.net/go/acme"
 	"github.com/google/goterm/term"
+	ansiterm "github.com/Azure/go-ansiterm"
 )
 
 type TermHandler struct {
 	win *acme.Win
 	pty *term.PTY
 	cmd *exec.Cmd
+	AnsiParser *ansiterm.AnsiParser
+	buf *bytes.Buffer
 	history     []string
 	historyItem int
 }
@@ -22,7 +26,10 @@ type TermHandler struct {
 func NewTerm(win *acme.Win) (TermHandler, error) {
 	t := TermHandler{
 		win: win,
+		buf: new(bytes.Buffer),
 	}
+
+	t.AnsiParser = ansiterm.CreateParser("Ground", t) //, ansiterm.WithLogf(log.Printf))
 
 	pty, err := term.OpenPTY()
 	if err != nil {
@@ -56,7 +63,7 @@ func (h TermHandler) Close() error {
 }
 
 func (h TermHandler) Write(p []byte) (int, error) {
-	return h.win.Write("body", p)
+	return h.AnsiParser.Parse(p)
 }
 
 func (h TermHandler) ShellReadLoop() {
@@ -64,12 +71,12 @@ func (h TermHandler) ShellReadLoop() {
 	log.Println("ReadLoop exited:", written, err)
 }
 
-func (h TermHandler) Execute(cmd string) bool {
+func (h TermHandler) AcmeExecute(cmd string) bool {
 	log.Println("Execute", cmd)
 	return false
 }
 
-func (h TermHandler) Look(arg string) bool {
+func (h TermHandler) AcmeLook(arg string) bool {
 	log.Println("Look", arg)
 	return false
 }
@@ -82,8 +89,13 @@ func (h TermHandler) Insert(e *acme.Event) bool {
 		h.win.Write("data", []byte{})
 		h.win.Write("body", []byte("[NULL OMG YOU SENT A NULL YOU ARE AMAZING]"))
 		return true
+	case "\010":
+		log.Println("OMG BACKSPACE")
 	}
 
+	if e.Q0 >= e.Q1 {
+		log.Println("bigger", e.Q0, e.Q1)
+	}
 	switch (e.C1) {
 	case 'K', 'M':
 		h.win.Addr("#%d,#%d", e.Q0, e.Q1);
@@ -136,11 +148,11 @@ func main() {
 		switch e.C2 {
 		case 'x', 'X': // execute
 			cmd := strings.TrimSpace(string(e.Text))
-			if !h.Execute(cmd) {
+			if !h.AcmeExecute(cmd) {
 				w.WriteEvent(e)
 			}
 		case 'l', 'L': // look
-			if !h.Look(string(e.Text)) {
+			if !h.AcmeLook(string(e.Text)) {
 				w.WriteEvent(e)
 			}
 		case 'I': // Insert in text area
