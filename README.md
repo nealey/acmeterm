@@ -10,7 +10,9 @@ Planned Features
 
 * [ ] History of stuff you've typed in, which will persist across `ssh` invocations, `ipmitool sol activate`, or whatever else
 * [ ] Strip VT100/ANSI/xterm escape codes
-* [ ] Use xterm title escapes to set window title
+* [ ] Understand all xterm title escapes to set window title,
+  so I can see what's going on when I log into our cloud machines,
+  without having to edit hundreds of .bashrc files
 * [ ] Pay attention to termios to go in and out of raw mode, instead of the hack in win.c
 * [ ] Helper program to let you remote edit files. It'll go something like this:
   * `cat fileYouWantToEdit`
@@ -32,6 +34,10 @@ Stretch Goals
   with screen positioning and the whole works.
   There are even VT100 emulators already written for Go.
   The one by the Microsoft Azure team looks particularly promising.
+* New escape code that means "here is a pathname and file contents. Edit this."
+* Google's hterm has a cool thing where you can display images inline.
+  We obviously can't display images inline,
+  but we could save them off to a file and launch an image viewer.
 
 
 Philosophy
