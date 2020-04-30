@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"strings"
 )
 
 func (t TermHandler) Print(b byte) error {
@@ -11,9 +12,8 @@ func (t TermHandler) Print(b byte) error {
 // C0 command
 func (t TermHandler) Execute(b byte) error {
 	switch b {
-	case '\n', '\t':
+	case '\n', '\t', '\r':
 		return t.buf.WriteByte(b)
-	case '\r':
 	default:
 		log.Println("Execute", b)
 	}
@@ -178,7 +178,10 @@ func (t TermHandler) RI() error {
 
 // Flush updates from previous commands
 func (t TermHandler) Flush() error {
-	t.win.Write("body", t.buf.Bytes())
+	s := t.buf.String()
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+	t.win.Write("body", []byte(s))
 	t.buf.Reset()
 	return nil
 }
