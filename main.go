@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"9fans.net/go/acme"
 	"github.com/google/goterm/term"
@@ -50,6 +51,10 @@ func NewTerm(win *acme.Win) (TermHandler, error) {
 		Stdin:  pty.Slave,
 		Stdout:  pty.Slave,
 		Stderr:  pty.Slave,
+		SysProcAttr: &syscall.SysProcAttr{
+			Setsid: true,
+			Setctty: true,
+		},
 	}
 	if err := t.cmd.Start(); err != nil {
 		return t, err
