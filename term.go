@@ -14,6 +14,12 @@ func (t TermHandler) Execute(b byte) error {
 	switch b {
 	case '\n', '\t', '\r':
 		return t.buf.WriteByte(b)
+	case 7: // BEL
+	case 8: // Backspace
+		// Handling this correctly means we keep track of the entire terminal contents.
+		t.Flush()
+		t.win.Addr("$-#1,")
+		t.win.Write("data", []byte{})
 	default:
 		log.Println("Execute", b)
 	}
@@ -136,7 +142,7 @@ func (t TermHandler) DCH(i int) error {
 
 // Set Graphics Rendition
 func (t TermHandler) SGR(r []int) error {
-	log.Println("SGR", r)
+	// Things like color, underline, font weight. We can't do any of them.
 	return nil
 }
 

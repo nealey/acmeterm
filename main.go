@@ -89,13 +89,8 @@ func (h TermHandler) Insert(e *acme.Event) bool {
 		h.win.Write("data", []byte{})
 		h.win.Write("body", []byte("[NULL OMG YOU SENT A NULL YOU ARE AMAZING]"))
 		return true
-	case "\010":
-		log.Println("OMG BACKSPACE")
 	}
 
-	if e.Q0 >= e.Q1 {
-		log.Println("bigger", e.Q0, e.Q1)
-	}
 	switch (e.C1) {
 	case 'K', 'M':
 		h.win.Addr("#%d,#%d", e.Q0, e.Q1);
@@ -136,15 +131,6 @@ func main() {
 	go h.ShellReadLoop()
 
 	for e := range w.EventChan() {
-		if (len(e.Text) == 0) && (e.Q0 < e.Q1) {
-			w.Addr("#%d,#%d", e.Q0, e.Q1)
-			data, err := w.ReadAll("xdata")
-			if err != nil {
-				w.Err(err.Error())
-				continue
-			}
-			e.Text = data
-		}
 		switch e.C2 {
 		case 'x', 'X': // execute
 			cmd := strings.TrimSpace(string(e.Text))
@@ -156,8 +142,28 @@ func main() {
 				w.WriteEvent(e)
 			}
 		case 'I': // Insert in text area
+			if (len(e.Text) == 0) && (e.Q0 < e.Q1) {
+				w.Addr("#%d,#%d", e.Q0, e.Q1)
+				data, err := w.ReadAll("xdata")
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				e.Text = data
+			}
 			if ! h.Insert(e) {
 				w.WriteEvent(e)
+			}
+		case 'D': // Delete in text area
+			if (e.C1 == 'K') || (e.C1 == 'M') {
+				// XXX: keep track of how many deletes we're expecting from the shell
+				deleted := e.Q1 - e.Q0
+				del := make([]byte, deleted)
+				for i := 0; i < deleted; i += 1 {
+					del[i] = '\010'
+				}
+				h.pty.Master.Write(del)
+				w.Write("data", del)
 			}
 		default:
 			w.WriteEvent(e)
